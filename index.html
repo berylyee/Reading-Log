@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reading Log</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #130e08; }
+    input, textarea { outline: none; }
+    textarea { resize: vertical; }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-thumb { background: rgba(200,169,110,0.12); border-radius: 2px; }
+  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;1,400&family=Lora:ital@0;1&family=Courier+Prime&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    const STORAGE_KEY = "reading-log-v3";
+    const GENRES = ["Fiction","Non-fiction","Fantasy","Sci-Fi","Mystery","Thriller","Romance","Horror","Biography","History","Self-help","Poetry","Graphic Novel","Classic","Other"];
+    const emptyForm = { title:"", author:"", blurb:"", rating:0, thoughts:"", quote:"", dateRead:"", genres:[] };
+
+    const DEFAULT_BOOKS = [
+      { id:1745625600000, addedAt:"2026-04-26T00:00:00.000Z", title:"Strange Pictures", author:"Uketsu", blurb:"Woman kills her mother, husband and daughter in law", rating:4, thoughts:"I enjoy a good whodunnit. But this felt more like withholding information rather than discovering it. And I felt the way they tied everything together at the end was a tad convenient. Overall still an enjoyable read.", quote:"", dateRead:"Apr 2026", genres:["Mystery"] },
+      { id:1743379200000, addedAt:"2026-03-31T00:00:00.000Z", title:"Head Above Water", author:"CE Ricci", blurb:"Step brothers reunite after their parents' death", rating:3.5, thoughts:"The brothers thing kinda nagged me in the back of my mind. And I don't know how I feel about having sex at your parents' funeral. It was a little too dramatic, with the bottom having a full on breakdown most of the book. But I enjoyed the spice. The vocab did get a bit repetitive but I guess there's only so many ways to say erection.", quote:"", dateRead:"Mar 2026", genres:["MM"] },
+      { id:1743292800000, addedAt:"2026-03-30T00:00:00.000Z", title:"The Long Game", author:"Rachel Reid", blurb:"Charity, therapy and marriage", rating:5, thoughts:"I can see why this is the highest rated book in the series. I was worried it would get boring now that they're together, but Reid still serves up that juicy tension. This book leans towards Ilya's POV, and his struggle with mental illness, which is relatable. Shane's obliviousness is cute and frustrating, which is also relatable. The issues don't exactly get resolved by the end, but it rarely does in real life either. Fodder for the next book I guess. Can't wait!", quote:"", dateRead:"Mar 2026", genres:["MM"] },
+      { id:1741824000000, addedAt:"2026-03-15T00:00:00.000Z", title:"Game Changer", author:"Rachel Reid", blurb:"Scott likes Kip's juice", rating:3.5, thoughts:"Not bad but a bit draggy. And maybe sunshine trope just isn't my thing. I need the yearning, the pain. But that scene where Kip joins Scott on the ice and they kiss, with that song playing, is one of the best scenes in the show. Also Francois is 🔥", quote:"Give me your eyes, I need sunshine", dateRead:"Mar 2026", genres:["MM"] },
+      { id:1740700800000, addedAt:"2026-02-28T00:00:00.000Z", title:"Heated Rivalry", author:"Rachel Reid", blurb:"Rivals to lovers", rating:5, thoughts:"I loved it obviously. I'm glad I watched the series first (for the feels) but the book gives us insight into their internal monologue. Idk what about this story I love so much. I could say that removing females out of the equation removes the power dynamics and all the baggage of being a female, but this isn't a thesis. 2 hot men > 1 hot man", quote:"Willyoucometomycottagethissummer", dateRead:"Feb 2026", genres:["MM"] }
+    ];
+    const DEFAULT_TAGS = ["MM"];
+
+    function HalfStar({ position, value, hovered, readonly, onHalf, onFull, onLeave, onClick }) {
+      const active = hovered || value;
+      const full  = active >= position;
+      const half  = !full && active >= position - 0.5;
+      const size  = readonly ? 16 : 28;
+      const gold  = "#c8a96e";
+      const dim   = "#2a1f12";
+      return (
+        <div style={{ position:"relative", width:size, height:size, cursor: readonly?"default":"pointer", flexShrink:0 }} onMouseLeave={onLeave}>
+          <svg width={size} height={size} viewBox="0 0 24 24" style={{ position:"absolute", top:0, left:0 }}>
+            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill={dim} />
+          </svg>
+          {full && (
+            <svg width={size} height={size} viewBox="0 0 24 24" style={{ position:"absolute", top:0, left:0 }}>
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill={gold} />
+            </svg>
+          )}
+          {half && !full && (
+            <svg width={size} height={size} viewBox="0 0 24 24" style={{ position:"absolute", top:0, left:0 }}>
+              <defs><clipPath id={`half-${position}`}><rect x="0" y="0" width="12" height="24" /></clipPath></defs>
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill={gold} clipPath={`url(#half-${position})`} />
+            </svg>
+          )}
+          {!readonly && <div style={{ position:"absolute", top:0, left:0, width:"50%", height:"100%" }} onMouseEnter={() => onHalf(position - 0.5)} onClick={() => onClick(position - 0.5)} />}
+          {!readonly && <div style={{ position:"absolute", top:0, left:"50%", width:"50%", height:"100%" }} onMouseEnter={() => onFull(position)} onClick={() => onClick(position)} />}
+        </div>
+      );
+    }
+
+    function StarRating({ value, onChange, readonly=false }) {
+      const [hovered, setHovered] = useState(0);
+      return (
+        <div style={{ display:"flex", gap: readonly?"3px":"5px", alignItems:"center" }}>
+          {[1,2,3,4,5].map(pos => (
+            <HalfStar key={pos} position={pos} value={value} hovered={hovered} readonly={readonly}
+              onHalf={v => setHovered(v)} onFull={v => setHovered(v)} onLeave={() => setHovered(0)}
+              onClick={v => !readonly && onChange(v)} />
+          ))}
+          {!readonly && value > 0 && (
+            <span style={{ fontFamily:"'Courier New', monospace", fontSize:"10px", color:"#6a5a48", marginLeft:"6px", letterSpacing:"0.05em" }}>
+              {value % 1 === 0 ? value + ".0" : value}
+            </span>
+          )}
+        </div>
+      );
+    }
+
+    function BookForm({ initial, onSave, onCancel, isEdit=false, customTags, onAddCustomTag }) {
+      const [form, setForm] = useState(initial);
+      const [newTag, setNewTag] = useState("");
+      const toggleGenre = g => setForm(f => ({ ...f, genres: f.genres.includes(g) ? f.genres.filter(x => x !== g) : [...f.genres, g] }));
+      const allTags = [...GENRES, ...customTags.filter(t => !GENRES.includes(t))];
+      const handleAddTag = () => {
+        const tag = newTag.trim(); if (!tag) return;
+        onAddCustomTag(tag);
+        setForm(f => ({ ...f, genres: f.genres.includes(tag) ? f.genres : [...f.genres, tag] }));
+        setNewTag("");
+      };
+      const inp = extra => ({ style: { background:"rgba(255,255,255,0.04)", border:"1px solid rgba(200,169,110,0.16)", borderRadius:"2px", color:"#ede0cc", padding:"9px 13px", fontFamily:"'Lora', Georgia, serif", fontSize:"14px", width:"100%", ...extra } });
+      return (
+        <div style={{ border:"1px solid rgba(200,169,110,0.18)", borderRadius:"4px", padding:"26px", marginBottom:"12px", background:"rgba(255,255,255,0.018)" }}>
+          {isEdit && <div style={{ fontFamily:"'Courier New', monospace", fontSize:"10px", color:"#c8a96e", letterSpacing:"0.15em", textTransform:"uppercase", marginBottom:"16px", opacity:0.7 }}>— editing entry —</div>}
+          <div style={{ display:"grid", gap:"13px" }}>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"10px" }}>
+              <input placeholder="Book title *" value={form.title} onChange={e=>setForm({...form,title:e.target.value})} {...inp()} />
+              <input placeholder="Author" value={form.author} onChange={e=>setForm({...form,author:e.target.value})} {...inp()} />
+            </div>
+            <textarea placeholder="Short blurb — what's it about?" value={form.blurb} onChange={e=>setForm({...form,blurb:e.target.value})} rows={2} {...inp({ fontStyle:"italic" })} />
+            <div style={{ display:"grid", gridTemplateColumns:"auto 1fr", gap:"20px", alignItems:"start" }}>
+              <div>
+                <div style={{ fontFamily:"'Courier New', monospace", fontSize:"10px", color:"#6a5a48", letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:"8px" }}>Rating</div>
+                <StarRating value={form.rating} onChange={v=>setForm({...form,rating:v})} />
+              </div>
+              <input placeholder="Date finished (e.g. May 2026)" value={form.dateRead} onChange={e=>setForm({...form,dateRead:e.target.value})} {...inp()} />
+            </div>
+            <div>
+              <div style={{ fontFamily:"'Courier New', monospace", fontSize:"10px", color:"#6a5a48", letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:"8px" }}>Genres & Tags</div>
+              <div style={{ display:"flex", flexWrap:"wrap", gap:"5px", marginBottom:"10px" }}>
+                {allTags.map(g => (
+                  <span key={g} onClick={()=>toggleGenre(g)} style={{ padding:"3px 10px", borderRadius:"2px", fontSize:"10px", fontFamily:"'Courier New', monospace", letterSpacing:"0.08em", cursor:"pointer", textTransform:"uppercase", userSelect:"none", border:"1px solid "+(form.genres.includes(g)?"rgba(200,169,110,0.55)":"rgba(200,169,110,0.13)"), background: form.genres.includes(g)?"rgba(200,169,110,0.13)":"transparent", color: form.genres.includes(g)?"#c8a96e":"#4a3f30" }}>{g}</span>
+                ))}
+              </div>
+              <div style={{ display:"flex", gap:"8px" }}>
+                <input placeholder="Add your own tag..." value={newTag} onChange={e => setNewTag(e.target.value)} onKeyDown={e => e.key === "Enter" && handleAddTag()} style={{ flex:1, background:"rgba(255,255,255,0.04)", border:"1px solid rgba(200,169,110,0.16)", borderRadius:"2px", color:"#ede0cc", padding:"7px 12px", fontFamily:"'Lora', Georgia, serif", fontSize:"13px" }} />
+                <button onClick={handleAddTag} style={{ background:"transparent", border:"1px solid rgba(200,169,110,0.28)", color:"#c8a96e", padding:"7px 14px", fontFamily:"'Courier New', monospace", fontSize:"10px", letterSpacing:"0.1em", textTransform:"uppercase", cursor:"pointer", borderRadius:"2px", whiteSpace:"nowrap" }}>+ add</button>
+              </div>
+            </div>
+            <textarea placeholder="Your thoughts on it..." value={form.thoughts} onChange={e=>setForm({...form,thoughts:e.target.value})} rows={3} {...inp()} />
+            <textarea placeholder="A favourite quote..." value={form.quote} onChange={e=>setForm({...form,quote:e.target.value})} rows={2} {...inp({ fontFamily:"'Playfair Display', Georgia, serif", fontStyle:"italic" })} />
+            <div style={{ display:"flex", gap:"8px" }}>
+              <button onClick={() => onSave(form)} disabled={!form.title.trim()} style={{ flex:1, background:form.title.trim()?"#c8a96e":"rgba(200,169,110,0.12)", border:"none", color:form.title.trim()?"#130e08":"#3a3028", padding:"12px", fontFamily:"'Courier New', monospace", fontSize:"11px", letterSpacing:"0.15em", textTransform:"uppercase", cursor:form.title.trim()?"pointer":"not-allowed", borderRadius:"2px", fontWeight:700 }}>
+                {isEdit ? "Save changes" : "Save to log"}
+              </button>
+              {onCancel && <button onClick={onCancel} style={{ padding:"12px 18px", background:"transparent", border:"1px solid rgba(200,169,110,0.18)", color:"#5a4a38", fontFamily:"'Courier New', monospace", fontSize:"11px", letterSpacing:"0.12em", textTransform:"uppercase", cursor:"pointer", borderRadius:"2px" }}>Cancel</button>}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function BookCard({ book, onDelete, onEdit }) {
+      const [expanded, setExpanded] = useState(false);
+      return (
+        <div style={{ background:"rgba(255,255,255,0.025)", border:"1px solid rgba(200,169,110,0.13)", borderRadius:"4px", overflow:"hidden", transition:"border-color 0.2s, box-shadow 0.2s" }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor="rgba(200,169,110,0.38)"; e.currentTarget.style.boxShadow="0 4px 24px rgba(0,0,0,0.3)"; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor="rgba(200,169,110,0.13)"; e.currentTarget.style.boxShadow="none"; }}>
+          <div style={{ display:"flex" }}>
+            <div style={{ flex:1, padding:"18px 20px", minWidth:0 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:"10px" }}>
+                <div style={{ minWidth:0, flex:1, cursor:"pointer" }} onClick={() => setExpanded(!expanded)}>
+                  <div style={{ fontFamily:"'Playfair Display', Georgia, serif", fontSize:"18px", color:"#ede0cc", fontStyle:"italic", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{book.title}</div>
+                  {book.author && <div style={{ fontFamily:"'Courier New', monospace", fontSize:"10px", color:"#6a5a48", letterSpacing:"0.12em", textTransform:"uppercase", marginTop:"3px" }}>{book.author}</div>}
+                </div>
+                <div style={{ display:"flex", alignItems:"center", gap:"6px", flexShrink:0 }}>
+                  <span onClick={() => setExpanded(!expanded)} style={{ color:"rgba(200,169,110,0.25)", fontSize:"11px", fontFamily:"'Courier New', monospace", cursor:"pointer", padding:"2px 4px" }}>{expanded?"▲":"▼"}</span>
+                  <button onClick={() => onEdit(book)} style={{ background:"none", border:"1px solid rgba(200,169,110,0.18)", cursor:"pointer", color:"#6a5a48", fontSize:"10px", padding:"3px 8px", borderRadius:"2px", fontFamily:"'Courier New', monospace", letterSpacing:"0.08em", textTransform:"uppercase", transition:"all 0.15s" }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor="rgba(200,169,110,0.5)"; e.currentTarget.style.color="#c8a96e"; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor="rgba(200,169,110,0.18)"; e.currentTarget.style.color="#6a5a48"; }}>edit</button>
+                  <button onClick={() => onDelete(book.id)} style={{ background:"none", border:"none", cursor:"pointer", color:"#2e2416", fontSize:"20px", lineHeight:1, padding:"0 2px", transition:"color 0.15s" }}
+                    onMouseEnter={e => e.currentTarget.style.color="#a03030"}
+                    onMouseLeave={e => e.currentTarget.style.color="#2e2416"}>×</button>
+                </div>
+              </div>
+              {book.blurb && <p style={{ fontFamily:"'Lora', Georgia, serif", fontSize:"13px", color:"#7a6a56", lineHeight:"1.6", margin:"10px 0 0 0", fontStyle:"italic" }}>{book.blurb}</p>}
+              <div style={{ display:"flex", alignItems:"center", gap:"12px", marginTop:"10px", flexWrap:"wrap" }}>
+                {book.rating > 0 && <StarRating value={book.rating} onChange={() => {}} readonly />}
+                {book.dateRead && <span style={{ fontFamily:"'Courier New', monospace", fontSize:"10px", color:"#4a3f30" }}>{book.dateRead}</span>}
+              </div>
+              {book.genres?.length > 0 && (
+                <div style={{ display:"flex", flexWrap:"wrap", gap:"4px", marginTop:"9px" }}>
+                  {book.genres.map(g => <span key={g} style={{ padding:"2px 8px", fontSize:"9px", fontFamily:"'Courier New', monospace", letterSpacing:"0.07em", textTransform:"uppercase", color:"#7a9ebe", background:"rgba(122,158,190,0.09)", border:"1px solid rgba(122,158,190,0.18)", borderRadius:"2px" }}>{g}</span>)}
+                </div>
+              )}
+            </div>
+          </div>
+          {expanded && (book.thoughts || book.quote) && (
+            <div style={{ padding:"16px 20px", borderTop:"1px solid rgba(200,169,110,0.07)", background:"rgba(0,0,0,0.2)" }}>
+              {book.thoughts && <p style={{ fontFamily:"'Lora', Georgia, serif", fontSize:"14px", color:"#9a8870", lineHeight:"1.8", margin:"0 0 14px 0" }}>{book.thoughts}</p>}
+              {book.quote && <blockquote style={{ margin:0, padding:"10px 16px", borderLeft:"2px solid rgba(200,169,110,0.45)", fontFamily:"'Playfair Display', Georgia, serif", fontStyle:"italic", fontSize:"13px", color:"#c8a96e", lineHeight:"1.75", background:"rgba(200,169,110,0.04)", borderRadius:"0 2px 2px 0" }}>"{book.quote}"</blockquote>}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function ReadingLog() {
+      const [books, setBooks] = useState([]);
+      const [customTags, setCustomTags] = useState([]);
+      const [showAddForm, setShowAddForm] = useState(false);
+      const [editingBook, setEditingBook] = useState(null);
+      const [loaded, setLoaded] = useState(false);
+      const [sortBy, setSortBy] = useState("newest");
+      const [filterGenre, setFilterGenre] = useState("");
+      const [filterRating, setFilterRating] = useState(0);
+      const [filterAuthor, setFilterAuthor] = useState("");
+      const [searchQuery, setSearchQuery] = useState("");
+      const [exportMsg, setExportMsg] = useState("");
+
+      useEffect(() => {
+        try {
+          let found = false;
+          for (const key of ["reading-log-v3","reading-log-v2","reading-log-v1","my-reading-log-v2","my-reading-log"]) {
+            const s = localStorage.getItem(key);
+            if (s) { const parsed = JSON.parse(s); if (parsed.length > 0) { setBooks(parsed); found = true; break; } }
+          }
+          if (!found) setBooks(DEFAULT_BOOKS);
+          const t = localStorage.getItem("reading-log-v3-tags");
+          if (t) { const parsed = JSON.parse(t); if (parsed.length > 0) setCustomTags(parsed); else setCustomTags(DEFAULT_TAGS); }
+          else setCustomTags(DEFAULT_TAGS);
+        } catch { setBooks(DEFAULT_BOOKS); setCustomTags(DEFAULT_TAGS); }
+        setLoaded(true);
+      }, []);
+
+      useEffect(() => {
+        if (!loaded) return;
+        try { localStorage.setItem("reading-log-v3", JSON.stringify(books)); } catch {}
+        try { localStorage.setItem("reading-log-v3-tags", JSON.stringify(customTags)); } catch {}
+      }, [books, customTags, loaded]);
+
+      const exportJson = () => {
+        const data = JSON.stringify({ books, customTags }, null, 2);
+        navigator.clipboard.writeText(data).then(() => setExportMsg("copied")).catch(() => setExportMsg(data));
+      };
+      const addCustomTag = tag => setCustomTags(prev => prev.includes(tag) ? prev : [...prev, tag]);
+      const addBook = (form) => { setBooks(prev => [{ ...form, id: Date.now(), addedAt: new Date().toISOString() }, ...prev]); setShowAddForm(false); };
+      const saveEdit = (form) => { setBooks(prev => prev.map(b => b.id === editingBook.id ? { ...editingBook, ...form } : b)); setEditingBook(null); };
+      const deleteBook = (id) => setBooks(prev => prev.filter(b => b.id !== id));
+      const startEdit = (book) => { setEditingBook(book); setShowAddForm(false); window.scrollTo({ top: 0, behavior: "smooth" }); };
+      const allGenres = [...new Set(books.flatMap(b => b.genres || []))].sort();
+      const allAuthors = [...new Set(books.map(b => b.author).filter(Boolean))].sort();
+      const hasFilters = filterGenre || filterRating || filterAuthor || searchQuery;
+      const displayed = [...books]
+        .filter(b => !filterGenre  || (b.genres||[]).includes(filterGenre))
+        .filter(b => !filterRating || b.rating === filterRating)
+        .filter(b => !filterAuthor || b.author === filterAuthor)
+        .filter(b => { if (!searchQuery) return true; const q = searchQuery.toLowerCase(); return b.title.toLowerCase().includes(q) || (b.author||"").toLowerCase().includes(q) || (b.blurb||"").toLowerCase().includes(q); })
+        .sort((a, b) => { if (sortBy === "newest") return b.addedAt.localeCompare(a.addedAt); if (sortBy === "rating") return b.rating - a.rating; if (sortBy === "title") return a.title.localeCompare(b.title); return 0; });
+      const avgRating = books.length ? (books.reduce((s,b) => s+b.rating, 0) / books.length).toFixed(1) : null;
+
+      return (
+        <div style={{ minHeight:"100vh", background:"#130e08", backgroundImage:"radial-gradient(ellipse 70% 45% at 10% 5%, rgba(200,169,110,0.055) 0%, transparent 65%), radial-gradient(ellipse 55% 65% at 90% 95%, rgba(120,70,20,0.07) 0%, transparent 65%)", fontFamily:"'Lora', Georgia, serif", padding:"44px 20px 100px" }}>
+          <div style={{ maxWidth:"680px", margin:"0 auto" }}>
+            <div style={{ marginBottom:"48px" }}>
+              <div style={{ fontFamily:"'Courier New', monospace", fontSize:"10px", color:"#2e2416", letterSpacing:"0.28em", textTransform:"uppercase", marginBottom:"10px" }}>— personal library —</div>
+              <h1 style={{ fontFamily:"'Playfair Display', Georgia, serif", fontSize:"clamp(40px,10vw,64px)", color:"#ede0cc", margin:0, fontWeight:400, lineHeight:1, letterSpacing:"-0.02em" }}>Reading Log</h1>
+              {books.length > 0 && (
+                <div style={{ fontFamily:"'Courier New', monospace", fontSize:"11px", color:"#5a4a38", marginTop:"14px", display:"flex", gap:"18px", alignItems:"center" }}>
+                  <span>{books.length} book{books.length!==1?"s":""}</span>
+                  {avgRating && <span>avg ★ {avgRating}</span>}
+                </div>
+              )}
+            </div>
+
+            {editingBook && <BookForm initial={editingBook} onSave={saveEdit} onCancel={() => setEditingBook(null)} isEdit={true} customTags={customTags} onAddCustomTag={addCustomTag} />}
+
+            {!editingBook && (
+              <>
+                <div style={{ display:"flex", gap:"8px", marginBottom:"26px", flexWrap:"wrap" }}>
+                  <button onClick={() => setShowAddForm(!showAddForm)}
+                    style={{ background:"transparent", border:"1px solid rgba(200,169,110,0.32)", color:"#c8a96e", padding:"9px 20px", fontFamily:"'Courier New', monospace", fontSize:"11px", letterSpacing:"0.15em", textTransform:"uppercase", cursor:"pointer", borderRadius:"2px", transition:"background 0.2s" }}
+                    onMouseEnter={e => e.currentTarget.style.background="rgba(200,169,110,0.08)"}
+                    onMouseLeave={e => e.currentTarget.style.background="transparent"}>
+                    {showAddForm ? "× cancel" : "+ log a book"}
+                  </button>
+                  <button onClick={exportJson}
+                    style={{ background:"transparent", border:"1px solid rgba(200,169,110,0.22)", color:"#6a5a48", padding:"9px 14px", fontFamily:"'Courier New', monospace", fontSize:"11px", letterSpacing:"0.15em", textTransform:"uppercase", cursor:"pointer", borderRadius:"2px", transition:"all 0.2s" }}
+                    onMouseEnter={e=>{ e.currentTarget.style.borderColor="rgba(200,169,110,0.5)"; e.currentTarget.style.color="#c8a96e"; }}
+                    onMouseLeave={e=>{ e.currentTarget.style.borderColor="rgba(200,169,110,0.22)"; e.currentTarget.style.color="#6a5a48"; }}>
+                    ↓ backup
+                  </button>
+                  <label style={{ background:"transparent", border:"1px solid rgba(200,169,110,0.22)", color:"#6a5a48", padding:"9px 14px", fontFamily:"'Courier New', monospace", fontSize:"11px", letterSpacing:"0.15em", textTransform:"uppercase", cursor:"pointer", borderRadius:"2px", transition:"all 0.2s" }}
+                    onMouseEnter={e=>{ e.currentTarget.style.borderColor="rgba(200,169,110,0.5)"; e.currentTarget.style.color="#c8a96e"; }}
+                    onMouseLeave={e=>{ e.currentTarget.style.borderColor="rgba(200,169,110,0.22)"; e.currentTarget.style.color="#6a5a48"; }}>
+                    ↑ restore
+                    <input type="file" accept=".json,.txt" style={{ display:"none" }} onChange={e => {
+                      const file = e.target.files?.[0]; if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = ev => {
+                        try {
+                          const parsed = JSON.parse(ev.target.result);
+                          if (parsed.books) setBooks(parsed.books);
+                          if (parsed.customTags) setCustomTags(parsed.customTags || []);
+                          setExportMsg("restored");
+                        } catch { alert("Couldn't read that file."); }
+                      };
+                      reader.readAsText(file); e.target.value = "";
+                    }} />
+                  </label>
+                </div>
+                {showAddForm && <BookForm initial={emptyForm} onSave={addBook} onCancel={() => setShowAddForm(false)} customTags={customTags} onAddCustomTag={addCustomTag} />}
+              </>
+            )}
+
+            {books.length > 0 && (
+              <div style={{ marginBottom:"22px", display:"grid", gap:"10px" }}>
+                <div style={{ position:"relative" }}>
+                  <span style={{ position:"absolute", left:"13px", top:"50%", transform:"translateY(-50%)", color:"#4a3f30", fontSize:"13px", pointerEvents:"none" }}>⌕</span>
+                  <input placeholder="Search by title, author, blurb..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                    style={{ width:"100%", background:"rgba(255,255,255,0.04)", border:"1px solid rgba(200,169,110,0.16)", borderRadius:"2px", color:"#ede0cc", padding:"9px 13px 9px 34px", fontFamily:"'Lora', Georgia, serif", fontSize:"14px", outline:"none", transition:"border-color 0.15s" }}
+                    onFocus={e => e.target.style.borderColor="rgba(200,169,110,0.4)"} onBlur={e => e.target.style.borderColor="rgba(200,169,110,0.16)"} />
+                  {searchQuery && <span onClick={()=>setSearchQuery("")} style={{ position:"absolute", right:"12px", top:"50%", transform:"translateY(-50%)", color:"#4a3f30", cursor:"pointer", fontSize:"16px", lineHeight:1 }}>×</span>}
+                </div>
+                <div style={{ display:"flex", gap:"5px", alignItems:"center" }}>
+                  <select value={sortBy} onChange={e=>setSortBy(e.target.value)} style={{ flex:1, minWidth:0, background:"#1a1208", border:"1px solid rgba(200,169,110,0.18)", color:"#8a7a60", padding:"5px 4px", fontFamily:"'Courier New', monospace", fontSize:"9px", letterSpacing:"0.05em", textTransform:"uppercase", borderRadius:"2px", cursor:"pointer", outline:"none" }}>
+                    <option value="newest">NEWEST</option><option value="rating">RATING</option><option value="title">A–Z</option>
+                  </select>
+                  {allGenres.length > 0 && (
+                    <select value={filterGenre} onChange={e=>setFilterGenre(e.target.value)} style={{ flex:1, minWidth:0, background:"#1a1208", border:"1px solid rgba(200,169,110,0.18)", color: filterGenre?"#7a9ebe":"#5a4a38", padding:"5px 4px", fontFamily:"'Courier New', monospace", fontSize:"9px", letterSpacing:"0.05em", textTransform:"uppercase", borderRadius:"2px", cursor:"pointer", outline:"none" }}>
+                      <option value="">GENRE</option>{allGenres.map(g => <option key={g} value={g}>{g}</option>)}
+                    </select>
+                  )}
+                  {allAuthors.length > 1 && (
+                    <select value={filterAuthor} onChange={e=>setFilterAuthor(e.target.value)} style={{ flex:1, minWidth:0, background:"#1a1208", border:"1px solid rgba(200,169,110,0.18)", color: filterAuthor?"#7a9ebe":"#5a4a38", padding:"5px 4px", fontFamily:"'Courier New', monospace", fontSize:"9px", letterSpacing:"0.05em", textTransform:"uppercase", borderRadius:"2px", cursor:"pointer", outline:"none" }}>
+                      <option value="">AUTHOR</option>{allAuthors.map(a => <option key={a} value={a}>{a}</option>)}
+                    </select>
+                  )}
+                  <select value={filterRating} onChange={e=>setFilterRating(Number(e.target.value))} style={{ flex:1, minWidth:0, background:"#1a1208", border:"1px solid rgba(200,169,110,0.18)", color: filterRating?"#c8a96e":"#5a4a38", padding:"5px 4px", fontFamily:"'Courier New', monospace", fontSize:"9px", letterSpacing:"0.05em", borderRadius:"2px", cursor:"pointer", outline:"none", textTransform:"uppercase" }}>
+                    <option value={0}>RATING</option>{[5,4.5,4,3.5,3,2.5,2,1.5,1,0.5].map(r => <option key={r} value={r}>{"★".repeat(Math.floor(r))}{r%1?".5":""}</option>)}
+                  </select>
+                  {hasFilters && (
+                    <button onClick={()=>{ setFilterGenre(""); setFilterRating(0); setFilterAuthor(""); setSearchQuery(""); }} style={{ background:"transparent", border:"1px solid rgba(200,169,110,0.15)", color:"#5a4a38", padding:"5px 7px", fontFamily:"'Courier New', monospace", fontSize:"9px", cursor:"pointer", borderRadius:"2px", flexShrink:0, transition:"all 0.15s" }}
+                      onMouseEnter={e=>{e.currentTarget.style.color="#c8a96e"; e.currentTarget.style.borderColor="rgba(200,169,110,0.35)";}}
+                      onMouseLeave={e=>{e.currentTarget.style.color="#5a4a38"; e.currentTarget.style.borderColor="rgba(200,169,110,0.15)";}}>✕</button>
+                  )}
+                </div>
+                {hasFilters && <div style={{ fontFamily:"'Courier New', monospace", fontSize:"10px", color:"#3a3028", letterSpacing:"0.08em" }}>{displayed.length} result{displayed.length!==1?"s":""}</div>}
+              </div>
+            )}
+
+            {displayed.length > 0 ? (
+              <div style={{ display:"grid", gap:"9px" }}>
+                {displayed.map(book => <BookCard key={book.id} book={book} onDelete={deleteBook} onEdit={startEdit} />)}
+              </div>
+            ) : books.length === 0 ? (
+              <div style={{ textAlign:"center", padding:"80px 20px" }}>
+                <div style={{ fontFamily:"'Playfair Display', Georgia, serif", fontSize:"56px", opacity:0.1, marginBottom:"16px" }}>📖</div>
+                <div style={{ fontFamily:"'Lora', Georgia, serif", fontStyle:"italic", fontSize:"15px", color:"#2e2416" }}>Your log is empty — add your first book!</div>
+              </div>
+            ) : (
+              <div style={{ textAlign:"center", padding:"40px", fontStyle:"italic", fontSize:"14px", color:"#2e2416" }}>No books match that filter.</div>
+            )}
+
+            <div style={{ marginTop:"70px", textAlign:"center", fontFamily:"'Courier New', monospace", fontSize:"9px", color:"#1a130a", letterSpacing:"0.22em" }}>— saved in your browser —</div>
+          </div>
+
+          {exportMsg && (
+            <div style={{ position:"fixed", bottom:"24px", left:"50%", transform:"translateX(-50%)", background:"#2a1e0e", border:"1px solid rgba(200,169,110,0.4)", color:"#c8a96e", padding:"16px 20px", borderRadius:"4px", fontFamily:"'Courier New', monospace", fontSize:"11px", letterSpacing:"0.08em", zIndex:1000, maxWidth:"340px", width:"90%", textAlign:"center", boxShadow:"0 8px 32px rgba(0,0,0,0.5)" }}>
+              {exportMsg === "copied" ? (
+                <><div style={{ marginBottom:"6px" }}>✓ Copied to clipboard!</div><div style={{ fontSize:"10px", color:"#8a7a60", lineHeight:"1.6" }}>Paste into a notes app. To restore, tap <strong style={{color:"#c8a96e"}}>↑ restore</strong>.</div></>
+              ) : exportMsg === "restored" ? (
+                <div>✓ Data restored!</div>
+              ) : (
+                <><div style={{ marginBottom:"8px", color:"#9a8870" }}>Copy the text below:</div><textarea readOnly value={exportMsg} onClick={e=>e.target.select()} rows={5} style={{ width:"100%", background:"rgba(0,0,0,0.3)", border:"1px solid rgba(200,169,110,0.15)", borderRadius:"2px", color:"#6a5a48", padding:"8px", fontFamily:"'Courier New', monospace", fontSize:"9px", resize:"none", outline:"none", marginBottom:"8px" }} /></>
+              )}
+              <button onClick={() => setExportMsg("")} style={{ background:"transparent", border:"1px solid rgba(200,169,110,0.3)", color:"#c8a96e", padding:"4px 14px", fontFamily:"'Courier New', monospace", fontSize:"9px", letterSpacing:"0.1em", textTransform:"uppercase", cursor:"pointer", borderRadius:"2px", marginTop:"4px" }}>ok</button>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<ReadingLog />);
+  </script>
+</body>
+</html>
