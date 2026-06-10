@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reading Log</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;1,400&family=Lora:ital@0;1&family=Courier+Prime&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #130e08;
+      background-image: radial-gradient(ellipse 70% 45% at 10% 5%, rgba(200,169,110,0.055) 0%, transparent 65%),
+                        radial-gradient(ellipse 55% 65% at 90% 95%, rgba(120,70,20,0.07) 0%, transparent 65%);
+      color: #ede0cc;
+      font-family: 'Lora', Georgia, serif;
+      min-height: 100vh;
+      padding: 44px 20px 100px;
+    }
+    #app { max-width: 680px; margin: 0 auto; }
+    input, textarea, select { outline: none; font-family: inherit; }
+    textarea { resize: vertical; }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-thumb { background: rgba(200,169,110,0.12); border-radius: 2px; }
+
+    /* Header */
+    .eyebrow { font-family: 'Courier Prime', monospace; font-size: 10px; color: #2e2416; letter-spacing: 0.28em; text-transform: uppercase; margin-bottom: 10px; }
+    h1 { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(40px,10vw,64px); color: #ede0cc; font-weight: 400; line-height: 1; letter-spacing: -0.02em; margin-bottom: 0; }
+    .stats { font-family: 'Courier Prime', monospace; font-size: 11px; color: #5a4a38; margin-top: 14px; display: flex; gap: 18px; }
+
+    /* Buttons */
+    .btn { background: transparent; border: 1px solid rgba(200,169,110,0.32); color: #c8a96e; padding: 9px 20px; font-family: 'Courier Prime', monospace; font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; cursor: pointer; border-radius: 2px; transition: background 0.2s; }
+    .btn:hover { background: rgba(200,169,110,0.08); }
+    .btn-dim { border-color: rgba(200,169,110,0.22); color: #6a5a48; padding: 9px 14px; }
+    .btn-dim:hover { border-color: rgba(200,169,110,0.5); color: #c8a96e; background: transparent; }
+    .btn-row { display: flex; gap: 8px; margin-bottom: 26px; flex-wrap: wrap; align-items: center; }
+    label.btn-dim { display: inline-block; }
+
+    /* Form */
+    .form-box { border: 1px solid rgba(200,169,110,0.18); border-radius: 4px; padding: 26px; margin-bottom: 12px; background: rgba(255,255,255,0.018); }
+    .form-grid { display: grid; gap: 13px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .form-label { font-family: 'Courier Prime', monospace; font-size: 10px; color: #6a5a48; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
+    .inp { background: rgba(255,255,255,0.04); border: 1px solid rgba(200,169,110,0.16); border-radius: 2px; color: #ede0cc; padding: 9px 13px; font-family: 'Lora', Georgia, serif; font-size: 14px; width: 100%; }
+    .inp:focus { border-color: rgba(200,169,110,0.4); }
+    textarea.inp { font-style: italic; }
+
+    /* Stars */
+    .stars { display: flex; gap: 5px; align-items: center; }
+    .star-wrap { position: relative; cursor: pointer; flex-shrink: 0; }
+    .star-val { font-family: 'Courier Prime', monospace; font-size: 10px; color: #6a5a48; margin-left: 6px; }
+
+    /* Tags */
+    .tags-wrap { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+    .tag { padding: 3px 10px; border-radius: 2px; font-size: 10px; font-family: 'Courier Prime', monospace; letter-spacing: 0.08em; cursor: pointer; text-transform: uppercase; user-select: none; border: 1px solid rgba(200,169,110,0.13); background: transparent; color: #4a3f30; transition: all 0.15s; }
+    .tag.active { border-color: rgba(200,169,110,0.55); background: rgba(200,169,110,0.13); color: #c8a96e; }
+    .tag-input-row { display: flex; gap: 8px; }
+    .tag-input { flex: 1; background: rgba(255,255,255,0.04); border: 1px solid rgba(200,169,110,0.16); border-radius: 2px; color: #ede0cc; padding: 7px 12px; font-family: 'Lora', Georgia, serif; font-size: 13px; }
+
+    /* Save/cancel */
+    .form-actions { display: flex; gap: 8px; }
+    .btn-save { flex: 1; background: #c8a96e; border: none; color: #130e08; padding: 12px; font-family: 'Courier Prime', monospace; font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; cursor: pointer; border-radius: 2px; font-weight: 700; transition: opacity 0.2s; }
+    .btn-save:disabled { background: rgba(200,169,110,0.12); color: #3a3028; cursor: not-allowed; }
+    .btn-cancel { padding: 12px 18px; background: transparent; border: 1px solid rgba(200,169,110,0.18); color: #5a4a38; font-family: 'Courier Prime', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; border-radius: 2px; }
+    .btn-cancel:hover { border-color: rgba(200,169,110,0.38); }
+    .edit-label { font-family: 'Courier Prime', monospace; font-size: 10px; color: #c8a96e; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 16px; opacity: 0.7; }
+
+    /* Search + filters */
+    .search-wrap { position: relative; margin-bottom: 10px; }
+    .search-icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: #4a3f30; font-size: 15px; pointer-events: none; }
+    .search-input { width: 100%; background: rgba(255,255,255,0.04); border: 1px solid rgba(200,169,110,0.16); border-radius: 2px; color: #ede0cc; padding: 9px 36px; font-family: 'Lora', Georgia, serif; font-size: 14px; }
+    .search-clear { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: #4a3f30; cursor: pointer; font-size: 18px; line-height: 1; }
+    .filter-row { display: flex; gap: 5px; align-items: center; }
+    .filter-row select { flex: 1; min-width: 0; background: #1a1208; border: 1px solid rgba(200,169,110,0.18); color: #5a4a38; padding: 5px 4px; font-family: 'Courier Prime', monospace; font-size: 9px; letter-spacing: 0.05em; text-transform: uppercase; border-radius: 2px; cursor: pointer; }
+    .filter-row select.active { color: #c8a96e; }
+    .clear-btn { background: transparent; border: 1px solid rgba(200,169,110,0.15); color: #5a4a38; padding: 5px 7px; font-family: 'Courier Prime', monospace; font-size: 9px; cursor: pointer; border-radius: 2px; flex-shrink: 0; }
+    .clear-btn:hover { color: #c8a96e; border-color: rgba(200,169,110,0.35); }
+    .result-count { font-family: 'Courier Prime', monospace; font-size: 10px; color: #3a3028; letter-spacing: 0.08em; margin-top: 8px; }
+
+    /* Genre bar */
+    .genre-bar-wrap { margin-bottom: 20px; }
+    .genre-bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; gap: 1px; margin-bottom: 10px; }
+    .genre-bar-seg { cursor: pointer; transition: opacity 0.15s; }
+    .genre-bar-seg:hover { opacity: 0.8; }
+    .genre-legend { display: flex; flex-wrap: wrap; gap: 8px 14px; }
+    .genre-legend-item { display: flex; align-items: center; gap: 5px; cursor: pointer; }
+    .genre-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .genre-legend-label { font-family: 'Courier Prime', monospace; font-size: 9px; letter-spacing: 0.07em; text-transform: uppercase; color: #4a3f30; }
+    .genre-legend-label.active { }
+
+    /* Book card */
+    .book-list { display: grid; gap: 9px; }
+    .book-card { background: rgba(255,255,255,0.025); border: 1px solid rgba(200,169,110,0.13); border-radius: 4px; overflow: hidden; transition: border-color 0.2s, box-shadow 0.2s; }
+    .book-card:hover { border-color: rgba(200,169,110,0.38); box-shadow: 0 4px 24px rgba(0,0,0,0.3); }
+    .book-card-inner { padding: 18px 20px; }
+    .book-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; cursor: pointer; }
+    .book-title { font-family: 'Playfair Display', Georgia, serif; font-size: 18px; color: #ede0cc; font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .book-author { font-family: 'Courier Prime', monospace; font-size: 10px; color: #6a5a48; letter-spacing: 0.12em; text-transform: uppercase; margin-top: 3px; }
+    .book-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+    .expand-arrow { color: rgba(200,169,110,0.25); font-size: 11px; font-family: 'Courier Prime', monospace; cursor: pointer; padding: 2px 4px; }
+    .edit-btn { background: none; border: 1px solid rgba(200,169,110,0.18); cursor: pointer; color: #6a5a48; font-size: 10px; padding: 3px 8px; border-radius: 2px; font-family: 'Courier Prime', monospace; letter-spacing: 0.08em; text-transform: uppercase; transition: all 0.15s; }
+    .edit-btn:hover { border-color: rgba(200,169,110,0.5); color: #c8a96e; }
+    .del-btn { background: none; border: none; cursor: pointer; color: #2e2416; font-size: 22px; line-height: 1; padding: 0 2px; transition: color 0.15s; }
+    .del-btn:hover { color: #a03030; }
+    .book-blurb { font-family: 'Lora', Georgia, serif; font-size: 13px; color: #7a6a56; line-height: 1.6; margin-top: 10px; font-style: italic; }
+    .book-meta { display: flex; align-items: center; gap: 12px; margin-top: 10px; flex-wrap: wrap; }
+    .book-date { font-family: 'Courier Prime', monospace; font-size: 10px; color: #4a3f30; }
+    .book-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 9px; }
+    .book-tag { padding: 2px 8px; font-size: 9px; font-family: 'Courier Prime', monospace; letter-spacing: 0.07em; text-transform: uppercase; color: #7a9ebe; background: rgba(122,158,190,0.09); border: 1px solid rgba(122,158,190,0.18); border-radius: 2px; }
+    .book-expanded { padding: 16px 20px; border-top: 1px solid rgba(200,169,110,0.07); background: rgba(0,0,0,0.2); }
+    .book-thoughts { font-family: 'Lora', Georgia, serif; font-size: 14px; color: #9a8870; line-height: 1.8; margin-bottom: 14px; }
+    .book-quote { margin: 0; padding: 10px 16px; border-left: 2px solid rgba(200,169,110,0.45); font-family: 'Playfair Display', Georgia, serif; font-style: italic; font-size: 13px; color: #c8a96e; line-height: 1.75; background: rgba(200,169,110,0.04); border-radius: 0 2px 2px 0; }
+
+    /* Empty state */
+    .empty { text-align: center; padding: 80px 20px; }
+    .empty-icon { font-family: 'Playfair Display', Georgia, serif; font-size: 56px; opacity: 0.1; margin-bottom: 16px; }
+    .empty-text { font-family: 'Lora', Georgia, serif; font-style: italic; font-size: 15px; color: #2e2416; }
+    .no-match { text-align: center; padding: 40px; font-style: italic; font-size: 14px; color: #2e2416; }
+
+    /* Footer */
+    .footer { margin-top: 70px; text-align: center; font-family: 'Courier Prime', monospace; font-size: 9px; color: #1a130a; letter-spacing: 0.22em; }
+
+    /* Toast */
+    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #2a1e0e; border: 1px solid rgba(200,169,110,0.4); color: #c8a96e; padding: 16px 20px; border-radius: 4px; font-family: 'Courier Prime', monospace; font-size: 11px; letter-spacing: 0.08em; z-index: 1000; max-width: 340px; width: 90%; text-align: center; box-shadow: 0 8px 32px rgba(0,0,0,0.5); display: none; }
+    .toast.show { display: block; }
+    .toast-sub { font-size: 10px; color: #8a7a60; line-height: 1.6; margin-top: 6px; }
+    .toast-ok { background: transparent; border: 1px solid rgba(200,169,110,0.3); color: #c8a96e; padding: 4px 14px; font-family: 'Courier Prime', monospace; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; border-radius: 2px; margin-top: 10px; }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+<div id="app">
+  <div style="margin-bottom:48px">
+    <div class="eyebrow">— personal library —</div>
+    <h1>Reading Log</h1>
+    <div class="stats" id="stats" style="display:none">
+      <span id="stat-count"></span>
+      <span id="stat-avg"></span>
+    </div>
+  </div>
+
+  <!-- Edit form (top) -->
+  <div id="edit-form-wrap" class="hidden">
+    <div class="form-box">
+      <div class="edit-label">— editing entry —</div>
+      <div class="form-grid" id="edit-form-grid"></div>
+    </div>
+  </div>
+
+  <!-- Action row -->
+  <div class="btn-row" id="action-row">
+    <button class="btn" id="toggle-add-btn">+ log a book</button>
+    <button class="btn btn-dim" id="backup-btn">↓ backup</button>
+    <label class="btn btn-dim" style="cursor:pointer">↑ restore<input type="file" id="restore-input" accept=".json,.txt" style="display:none"></label>
+  </div>
+
+  <!-- Add form -->
+  <div id="add-form-wrap" class="hidden">
+    <div class="form-box">
+      <div class="form-grid" id="add-form-grid"></div>
+    </div>
+  </div>
+
+  <!-- Search + filters -->
+  <div id="search-section" style="margin-bottom:22px; display:none">
+    <div class="search-wrap">
+      <span class="search-icon">⌕</span>
+      <input class="search-input" id="search-input" placeholder="Search by title, author, blurb..." />
+      <span class="search-clear hidden" id="search-clear">×</span>
+    </div>
+    <div class="filter-row">
+      <select id="sort-select">
+        <option value="newest">NEWEST</option>
+        <option value="rating">RATING</option>
+        <option value="title">A–Z</option>
+      </select>
+      <select id="genre-select"><option value="">GENRE</option></select>
+      <select id="author-select"><option value="">AUTHOR</option></select>
+      <select id="rating-select">
+        <option value="0">RATING</option>
+        <option value="5">★★★★★</option>
+        <option value="4.5">★★★★.5</option>
+        <option value="4">★★★★</option>
+        <option value="3.5">★★★.5</option>
+        <option value="3">★★★</option>
+        <option value="2.5">★★.5</option>
+        <option value="2">★★</option>
+        <option value="1.5">★.5</option>
+        <option value="1">★</option>
+        <option value="0.5">.5</option>
+      </select>
+      <button class="clear-btn hidden" id="clear-filters">✕</button>
+    </div>
+    <div class="result-count hidden" id="result-count"></div>
+  </div>
+
+  <!-- Genre bar -->
+  <div id="genre-bar-wrap" class="genre-bar-wrap hidden">
+    <div class="genre-bar" id="genre-bar"></div>
+    <div class="genre-legend" id="genre-legend"></div>
+  </div>
+
+  <!-- Book list -->
+  <div id="book-list"></div>
+
+  <div class="footer">— saved in your browser —</div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast">
+  <div id="toast-msg"></div>
+  <div class="toast-sub hidden" id="toast-sub"></div>
+  <button class="toast-ok" id="toast-ok">ok</button>
+</div>
+
+<script>
+const STORAGE_KEY = 'reading-log-v3';
+const GENRES = ['Fiction','Non-fiction','Fantasy','Sci-Fi','Mystery','Thriller','Romance','Horror','Biography','History','Self-help','Poetry','Graphic Novel','Classic','Other'];
+const COLORS = ['#c8a96e','#7a9ebe','#9ebe7a','#be7a9e','#7abebe','#be9e7a','#ae8ebe','#7aae8e','#be7a7a','#8eae7a','#7a8ebe','#be8e7a'];
+
+let books = [];
+let customTags = [];
+let editingId = null;
+let showAddForm = false;
+let filterGenre = '';
+let filterAuthor = '';
+let filterRating = 0;
+let sortBy = 'newest';
+let searchQuery = '';
+let expandedIds = new Set();
+let addFormRating = 0;
+let editFormRating = 0;
+
+// --- Storage ---
+function load() {
+  for (const key of [STORAGE_KEY,'reading-log-v2','reading-log-v1','my-reading-log-v2','my-reading-log']) {
+    try { const s = localStorage.getItem(key); if (s) { books = JSON.parse(s); break; } } catch {}
+  }
+  try { const t = localStorage.getItem(STORAGE_KEY+'-tags'); if (t) customTags = JSON.parse(t); } catch {}
+}
+function save() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(books)); } catch {}
+  try { localStorage.setItem(STORAGE_KEY+'-tags', JSON.stringify(customTags)); } catch {}
+}
+
+// --- Toast ---
+function showToast(msg, sub) {
+  document.getElementById('toast-msg').textContent = msg;
+  const subEl = document.getElementById('toast-sub');
+  if (sub) { subEl.textContent = sub; subEl.classList.remove('hidden'); }
+  else subEl.classList.add('hidden');
+  document.getElementById('toast').classList.add('show');
+}
+document.getElementById('toast-ok').onclick = () => document.getElementById('toast').classList.remove('show');
+
+// --- Stars ---
+function renderStarsSVG(value, size) {
+  const gold = '#c8a96e', dim = '#2a1f12';
+  const path = 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z';
+  let html = '';
+  for (let i = 1; i <= 5; i++) {
+    const full = value >= i;
+    const half = !full && value >= i - 0.5;
+    html += `<span style="position:relative;display:inline-block;width:${size}px;height:${size}px;flex-shrink:0">`;
+    html += `<svg width="${size}" height="${size}" viewBox="0 0 24 24" style="position:absolute;top:0;left:0"><path d="${path}" fill="${dim}"/></svg>`;
+    if (full) html += `<svg width="${size}" height="${size}" viewBox="0 0 24 24" style="position:absolute;top:0;left:0"><path d="${path}" fill="${gold}"/></svg>`;
+    if (half) html += `<svg width="${size}" height="${size}" viewBox="0 0 24 24" style="position:absolute;top:0;left:0"><defs><clipPath id="h${i}"><rect x="0" y="0" width="12" height="24"/></clipPath></defs><path d="${path}" fill="${gold}" clip-path="url(#h${i})"/></svg>`;
+    html += `</span>`;
+  }
+  return html;
+}
+
+function makeInteractiveStars(containerId, getRating, setRating) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const size = 28;
+  const path = 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z';
+  const gold = '#c8a96e', dim = '#2a1f12';
+
+  function render(hovered) {
+    const val = hovered || getRating();
+    let html = '';
+    for (let i = 1; i <= 5; i++) {
+      const full = val >= i, half = !full && val >= i - 0.5;
+      html += `<span style="position:relative;display:inline-block;width:${size}px;height:${size}px;cursor:pointer;flex-shrink:0" data-pos="${i}">`;
+      html += `<svg width="${size}" height="${size}" viewBox="0 0 24 24" style="position:absolute;top:0;left:0;pointer-events:none"><path d="${path}" fill="${dim}"/></svg>`;
+      if (full) html += `<svg width="${size}" height="${size}" viewBox="0 0 24 24" style="position:absolute;top:0;left:0;pointer-events:none"><path d="${path}" fill="${gold}"/></svg>`;
+      if (half) html += `<svg width="${size}" height="${size}" viewBox="0 0 24 24" style="position:absolute;top:0;left:0;pointer-events:none"><defs><clipPath id="ih${i}"><rect x="0" y="0" width="12" height="24"/></clipPath></defs><path d="${path}" fill="${gold}" clip-path="url(#ih${i})"/></svg>`;
+      html += `<span style="position:absolute;top:0;left:0;width:50%;height:100%" data-half="${i-0.5}"></span>`;
+      html += `<span style="position:absolute;top:0;left:50%;width:50%;height:100%" data-full="${i}"></span>`;
+      html += `</span>`;
+    }
+    if (getRating() > 0) html += `<span style="font-family:'Courier Prime',monospace;font-size:10px;color:#6a5a48;margin-left:6px">${getRating() % 1 === 0 ? getRating()+'.0' : getRating()}</span>`;
+    el.innerHTML = html;
+
+    el.querySelectorAll('[data-half]').forEach(z => {
+      z.onmouseenter = () => render(parseFloat(z.dataset.half));
+      z.onclick = () => { setRating(parseFloat(z.dataset.half)); render(0); };
+    });
+    el.querySelectorAll('[data-full]').forEach(z => {
+      z.onmouseenter = () => render(parseFloat(z.dataset.full));
+      z.onclick = () => { setRating(parseFloat(z.dataset.full)); render(0); };
+    });
+    el.onmouseleave = () => render(0);
+  }
+  render(0);
+}
+
+// --- Form builder ---
+function buildForm(gridId, initial, onSave, onCancel) {
+  const grid = document.getElementById(gridId);
+  const isEdit = !!initial.id;
+  let localRating = initial.rating || 0;
+  let localGenres = [...(initial.genres || [])];
+  const allTags = [...GENRES, ...customTags.filter(t => !GENRES.includes(t))];
+
+  grid.innerHTML = `
+    <div class="form-row">
+      <input class="inp" id="${gridId}-title" placeholder="Book title *" value="${escHtml(initial.title||'')}">
+      <input class="inp" id="${gridId}-author" placeholder="Author" value="${escHtml(initial.author||'')}">
+    </div>
+    <textarea class="inp" id="${gridId}-blurb" rows="2" placeholder="Short blurb — what's it about?" style="font-style:italic">${escHtml(initial.blurb||'')}</textarea>
+    <div style="display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:start">
+      <div>
+        <div class="form-label">Rating</div>
+        <div id="${gridId}-stars" style="display:flex;align-items:center"></div>
+      </div>
+      <input class="inp" id="${gridId}-date" placeholder="Date finished (e.g. May 2026)" value="${escHtml(initial.dateRead||'')}">
+    </div>
+    <div>
+      <div class="form-label">Genres & Tags</div>
+      <div class="tags-wrap" id="${gridId}-tags"></div>
+      <div class="tag-input-row">
+        <input class="tag-input" id="${gridId}-newtag" placeholder="Add your own tag...">
+        <button class="btn btn-dim" id="${gridId}-addtag" style="padding:7px 14px;font-size:10px">+ add</button>
+      </div>
+    </div>
+    <textarea class="inp" id="${gridId}-thoughts" rows="3" placeholder="Your thoughts on it..." style="font-style:normal">${escHtml(initial.thoughts||'')}</textarea>
+    <textarea class="inp" id="${gridId}-quote" rows="2" placeholder="A favourite quote..." style="font-family:'Playfair Display',Georgia,serif;font-style:italic">${escHtml(initial.quote||'')}</textarea>
+    <div class="form-actions">
+      <button class="btn-save" id="${gridId}-save">${isEdit ? 'Save changes' : 'Save to log'}</button>
+      <button class="btn-cancel" id="${gridId}-cancel">Cancel</button>
+    </div>
+  `;
+
+  makeInteractiveStars(`${gridId}-stars`, () => localRating, v => { localRating = v; });
+
+  function renderTags() {
+    const wrap = document.getElementById(`${gridId}-tags`);
+    wrap.innerHTML = allTags.map(g =>
+      `<span class="tag${localGenres.includes(g)?' active':''}" data-tag="${escHtml(g)}">${escHtml(g)}</span>`
+    ).join('');
+    wrap.querySelectorAll('.tag').forEach(t => {
+      t.onclick = () => {
+        const g = t.dataset.tag;
+        if (localGenres.includes(g)) localGenres = localGenres.filter(x => x !== g);
+        else localGenres.push(g);
+        renderTags();
+      };
+    });
+  }
+  renderTags();
+
+  document.getElementById(`${gridId}-addtag`).onclick = () => {
+    const val = document.getElementById(`${gridId}-newtag`).value.trim();
+    if (!val) return;
+    if (!customTags.includes(val)) { customTags.push(val); save(); }
+    if (!allTags.includes(val)) allTags.push(val);
+    if (!localGenres.includes(val)) localGenres.push(val);
+    document.getElementById(`${gridId}-newtag`).value = '';
+    renderTags();
+  };
+  document.getElementById(`${gridId}-newtag`).onkeydown = e => {
+    if (e.key === 'Enter') document.getElementById(`${gridId}-addtag`).click();
+  };
+
+  document.getElementById(`${gridId}-save`).onclick = () => {
+    const title = document.getElementById(`${gridId}-title`).value.trim();
+    if (!title) return;
+    onSave({
+      title,
+      author: document.getElementById(`${gridId}-author`).value.trim(),
+      blurb: document.getElementById(`${gridId}-blurb`).value.trim(),
+      rating: localRating,
+      dateRead: document.getElementById(`${gridId}-date`).value.trim(),
+      genres: localGenres,
+      thoughts: document.getElementById(`${gridId}-thoughts`).value.trim(),
+      quote: document.getElementById(`${gridId}-quote`).value.trim(),
+    });
+  };
+
+  document.getElementById(`${gridId}-cancel`).onclick = onCancel;
+
+  // Enable/disable save button
+  const titleInput = document.getElementById(`${gridId}-title`);
+  const saveBtn = document.getElementById(`${gridId}-save`);
+  function updateSave() { saveBtn.disabled = !titleInput.value.trim(); }
+  titleInput.oninput = updateSave;
+  updateSave();
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// --- Render ---
+function render() {
+  save();
+
+  // Stats
+  const statsEl = document.getElementById('stats');
+  if (books.length > 0) {
+    statsEl.style.display = 'flex';
+    document.getElementById('stat-count').textContent = `${books.length} book${books.length!==1?'s':''}`;
+    const avg = books.reduce((s,b) => s+b.rating, 0) / books.length;
+    document.getElementById('stat-avg').textContent = avg > 0 ? `avg ★ ${avg.toFixed(1)}` : '';
+  } else {
+    statsEl.style.display = 'none';
+  }
+
+  // Toggle add form
+  document.getElementById('add-form-wrap').classList.toggle('hidden', !showAddForm);
+  document.getElementById('toggle-add-btn').textContent = showAddForm ? '× cancel' : '+ log a book';
+  document.getElementById('action-row').classList.toggle('hidden', !!editingId);
+  document.getElementById('edit-form-wrap').classList.toggle('hidden', !editingId);
+
+  if (editingId) {
+    const book = books.find(b => b.id === editingId);
+    if (book) buildForm('edit-form-grid', book,
+      form => { Object.assign(book, form); editingId = null; render(); },
+      () => { editingId = null; render(); }
+    );
+  }
+
+  if (showAddForm) {
+    buildForm('add-form-grid', {},
+      form => {
+        books.unshift({ ...form, id: Date.now(), addedAt: new Date().toISOString() });
+        showAddForm = false;
+        render();
+      },
+      () => { showAddForm = false; render(); }
+    );
+  }
+
+  // Search & filter section
+  const searchSection = document.getElementById('search-section');
+  searchSection.style.display = books.length > 0 ? 'block' : 'none';
+
+  // Update genre/author dropdowns
+  const allGenres = [...new Set(books.flatMap(b => b.genres||[]))].sort();
+  const allAuthors = [...new Set(books.map(b => b.author).filter(Boolean))].sort();
+
+  const genreSel = document.getElementById('genre-select');
+  genreSel.innerHTML = `<option value="">GENRE</option>` + allGenres.map(g => `<option value="${escHtml(g)}"${filterGenre===g?' selected':''}>${escHtml(g)}</option>`).join('');
+  genreSel.className = filterGenre ? 'active' : '';
+
+  const authorSel = document.getElementById('author-select');
+  authorSel.innerHTML = `<option value="">AUTHOR</option>` + allAuthors.map(a => `<option value="${escHtml(a)}"${filterAuthor===a?' selected':''}>${escHtml(a)}</option>`).join('');
+  authorSel.className = filterAuthor ? 'active' : '';
+  authorSel.closest('.filter-row').querySelector('#author-select').style.display = allAuthors.length > 1 ? '' : 'none';
+
+  document.getElementById('rating-select').value = filterRating;
+  document.getElementById('rating-select').className = filterRating ? 'active' : '';
+  document.getElementById('sort-select').value = sortBy;
+  document.getElementById('search-input').value = searchQuery;
+
+  const hasFilters = filterGenre || filterAuthor || filterRating || searchQuery;
+  document.getElementById('clear-filters').classList.toggle('hidden', !hasFilters);
+
+  // Genre bar
+  const barWrap = document.getElementById('genre-bar-wrap');
+  const total = books.reduce((s,b) => s+(b.genres?.length||0), 0);
+  if (allGenres.length > 0 && total > 0) {
+    barWrap.classList.remove('hidden');
+    const counts = allGenres.map(g => ({ genre: g, count: books.filter(b=>(b.genres||[]).includes(g)).length }))
+      .filter(x => x.count > 0).sort((a,b) => b.count - a.count);
+    document.getElementById('genre-bar').innerHTML = counts.map(({genre,count},i) =>
+      `<div class="genre-bar-seg" style="flex:${count};background:${COLORS[i%COLORS.length]}" title="${escHtml(genre)}: ${Math.round(count/total*100)}%" data-genre="${escHtml(genre)}"></div>`
+    ).join('');
+    document.getElementById('genre-legend').innerHTML = counts.map(({genre,count},i) =>
+      `<div class="genre-legend-item" data-genre="${escHtml(genre)}">
+        <div class="genre-dot" style="background:${COLORS[i%COLORS.length]}"></div>
+        <span class="genre-legend-label${filterGenre===genre?' active':''}" style="${filterGenre===genre?'color:'+COLORS[i%COLORS.length]:''}">${escHtml(genre)} ${Math.round(count/total*100)}%</span>
+      </div>`
+    ).join('');
+    document.querySelectorAll('.genre-bar-seg, .genre-legend-item').forEach(el => {
+      el.onclick = () => { filterGenre = filterGenre === el.dataset.genre ? '' : el.dataset.genre; render(); };
+    });
+  } else {
+    barWrap.classList.add('hidden');
+  }
+
+  // Filtered/sorted books
+  let displayed = [...books]
+    .filter(b => !filterGenre  || (b.genres||[]).includes(filterGenre))
+    .filter(b => !filterRating || b.rating === filterRating)
+    .filter(b => !filterAuthor || b.author === filterAuthor)
+    .filter(b => {
+      if (!searchQuery) return true;
+      const q = searchQuery.toLowerCase();
+      return b.title.toLowerCase().includes(q) || (b.author||'').toLowerCase().includes(q) || (b.blurb||'').toLowerCase().includes(q);
+    })
+    .sort((a,b) => {
+      if (sortBy==='newest') return b.addedAt.localeCompare(a.addedAt);
+      if (sortBy==='rating') return b.rating - a.rating;
+      if (sortBy==='title')  return a.title.localeCompare(b.title);
+      return 0;
+    });
+
+  const rcEl = document.getElementById('result-count');
+  if (hasFilters) { rcEl.textContent = `${displayed.length} result${displayed.length!==1?'s':''}`; rcEl.classList.remove('hidden'); }
+  else rcEl.classList.add('hidden');
+
+  const listEl = document.getElementById('book-list');
+  if (books.length === 0) {
+    listEl.innerHTML = `<div class="empty"><div class="empty-icon">📖</div><div class="empty-text">Your log is empty — add your first book!</div></div>`;
+  } else if (displayed.length === 0) {
+    listEl.innerHTML = `<div class="no-match">No books match that filter.</div>`;
+  } else {
+    listEl.innerHTML = `<div class="book-list">${displayed.map(book => {
+      const exp = expandedIds.has(book.id);
+      return `<div class="book-card" data-id="${book.id}">
+        <div class="book-card-inner">
+          <div class="book-header" data-toggle="${book.id}">
+            <div style="min-width:0;flex:1">
+              <div class="book-title">${escHtml(book.title)}</div>
+              ${book.author ? `<div class="book-author">${escHtml(book.author)}</div>` : ''}
+            </div>
+            <div class="book-actions">
+              <span class="expand-arrow">${exp?'▲':'▼'}</span>
+              <button class="edit-btn" data-edit="${book.id}">edit</button>
+              <button class="del-btn" data-del="${book.id}">×</button>
+            </div>
+          </div>
+          ${book.blurb ? `<div class="book-blurb">${escHtml(book.blurb)}</div>` : ''}
+          <div class="book-meta">
+            ${book.rating > 0 ? `<div style="display:flex;align-items:center;gap:3px">${renderStarsSVG(book.rating,16)}</div>` : ''}
+            ${book.dateRead ? `<span class="book-date">${escHtml(book.dateRead)}</span>` : ''}
+          </div>
+          ${book.genres?.length ? `<div class="book-tags">${book.genres.map(g=>`<span class="book-tag">${escHtml(g)}</span>`).join('')}</div>` : ''}
+        </div>
+        ${exp && (book.thoughts||book.quote) ? `<div class="book-expanded">
+          ${book.thoughts ? `<p class="book-thoughts">${escHtml(book.thoughts)}</p>` : ''}
+          ${book.quote ? `<blockquote class="book-quote">"${escHtml(book.quote)}"</blockquote>` : ''}
+        </div>` : ''}
+      </div>`;
+    }).join('')}</div>`;
+
+    listEl.querySelectorAll('[data-toggle]').forEach(el => {
+      el.onclick = () => {
+        const id = parseInt(el.dataset.toggle);
+        if (expandedIds.has(id)) expandedIds.delete(id); else expandedIds.add(id);
+        render();
+      };
+    });
+    listEl.querySelectorAll('[data-edit]').forEach(el => {
+      el.onclick = e => { e.stopPropagation(); editingId = parseInt(el.dataset.edit); showAddForm = false; window.scrollTo({top:0,behavior:'smooth'}); render(); };
+    });
+    listEl.querySelectorAll('[data-del]').forEach(el => {
+      el.onclick = e => { e.stopPropagation(); books = books.filter(b => b.id !== parseInt(el.dataset.del)); render(); };
+    });
+  }
+}
+
+// --- Events ---
+document.getElementById('toggle-add-btn').onclick = () => { showAddForm = !showAddForm; render(); };
+
+document.getElementById('backup-btn').onclick = () => {
+  const data = JSON.stringify({ books, customTags }, null, 2);
+  navigator.clipboard.writeText(data)
+    .then(() => showToast('✓ Copied to clipboard!', 'Paste it into Notes and save it. To restore, tap ↑ restore and pick that file.'))
+    .catch(() => showToast('Clipboard blocked', 'Use the text area below to copy manually.'));
+};
+
+document.getElementById('restore-input').onchange = e => {
+  const file = e.target.files?.[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const parsed = JSON.parse(ev.target.result);
+      if (parsed.books) books = parsed.books;
+      if (parsed.customTags) customTags = parsed.customTags || [];
+      render();
+      showToast('✓ Data restored!');
+    } catch { alert("Couldn't read that file — make sure it's a backup from this app."); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+};
+
+document.getElementById('search-input').oninput = e => { searchQuery = e.target.value; document.getElementById('search-clear').classList.toggle('hidden', !searchQuery); render(); };
+document.getElementById('search-clear').onclick = () => { searchQuery = ''; render(); };
+document.getElementById('sort-select').onchange = e => { sortBy = e.target.value; render(); };
+document.getElementById('genre-select').onchange = e => { filterGenre = e.target.value; render(); };
+document.getElementById('author-select').onchange = e => { filterAuthor = e.target.value; render(); };
+document.getElementById('rating-select').onchange = e => { filterRating = parseFloat(e.target.value)||0; render(); };
+document.getElementById('clear-filters').onclick = () => { filterGenre=''; filterAuthor=''; filterRating=0; searchQuery=''; render(); };
+
+// --- Init ---
+load();
+render();
+</script>
+</body>
+</html>
